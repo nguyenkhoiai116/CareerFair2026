@@ -125,32 +125,48 @@ function loadExcel(e) {
 }
 
 // ── SCANNER ──────────────────────────────────────────────────
+// ── SCANNER ──────────────────────────────────────────────────
+let html5QrCode = null; // Dùng biến này thay cho codeReader cũ
+
 function switchInput(m) {
   document.getElementById('tabCam').classList.toggle('active',  m === 'camera');
   document.getElementById('tabHand').classList.toggle('active', m === 'manual');
   document.getElementById('secCam').style.display  = m === 'camera' ? 'block' : 'none';
   document.getElementById('secHand').style.display = m === 'manual' ? 'block' : 'none';
-  if (m === 'manual') { stopScan(); setTimeout(()=> document.getElementById('manInput').focus(), 100); }
+  if (m === 'manual') { 
+    stopScan(); 
+    setTimeout(()=> document.getElementById('manInput').focus(), 100); 
+  }
 }
 
 async function startScan() {
   if (scanning) return;
   try {
-    const ZX = window.ZXing;
-    codeReader = new ZX.BrowserMultiFormatReader();
-    const devs = await codeReader.listVideoInputDevices();
-    let deviceId;
-    const rear = devs.find(d => /back|rear|environment/i.test(d.label));
-    if (rear) deviceId = rear.deviceId;
-    else if (devs.length) deviceId = devs[devs.length - 1].deviceId;
     document.getElementById('btnStart').style.display = 'none';
     scanning = true;
-    await codeReader.decodeFromVideoDevice(deviceId, 'preview', (result, err) => {
-      if (result) {
-        processCode(result.getText());
-        if (!document.getElementById('swCont').checked) stopScan();
+
+    // Khởi tạo thư viện Html5Qrcode gắn vào div id="reader"
+    html5QrCode = new Html5Qrcode("reader");
+
+    // Cấu hình quét: Quét 10 khung hình/giây
+    const config = { fps: 10 };
+
+    // Bắt đầu mở camera sau (environment)
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      (decodedText, decodedResult) => {
+        // Quét thành công
+        processCode(decodedText);
+        // Nếu không bật "Quét liên tục", dừng camera
+        if (!document.getElementById('swCont').checked) {
+          stopScan();
+        }
+      },
+      (errorMessage) => {
+        // Lỗi khung hình (chưa thấy mã), bỏ qua để không in ra log rác
       }
-    });
+    );
   } catch(err) {
     showToast('❌ Không mở được camera: ' + err.message);
     document.getElementById('btnStart').style.display = 'block';
@@ -159,9 +175,19 @@ async function startScan() {
 }
 
 function stopScan() {
-  if (codeReader) { codeReader.reset(); codeReader = null; }
-  scanning = false;
-  document.getElementById('btnStart').style.display = 'block';
+  if (html5QrCode && scanning) {
+    html5QrCode.stop().then(() => {
+      html5QrCode.clear();
+      html5QrCode = null;
+      scanning = false;
+      document.getElementById('btnStart').style.display = 'block';
+    }).catch(err => {
+      console.error("Lỗi khi dừng camera:", err);
+    });
+  } else {
+    scanning = false;
+    document.getElementById('btnStart').style.display = 'block';
+  }
 }
 
 // ── PROCESS BARCODE ──────────────────────────────────────────

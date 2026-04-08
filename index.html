@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Chấm Công — BSKDN</title>
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -57,7 +57,7 @@
     <!-- Camera section -->
     <div id="secCam">
       <div class="cam-wrap">
-        <video id="preview" autoplay muted playsinline></video>
+        <div id="reader"></div>
         <div class="scan-ui">
           <div class="frame">
             <div class="cn tl"></div><div class="cn tr"></div>
