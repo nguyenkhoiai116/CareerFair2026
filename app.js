@@ -7,7 +7,7 @@ let scanning   = false;
 let lastScannedCode = '';
 let lastScanTime    = 0;
 let audioCtx = null;
-const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxu5JAigr1fAroWG12_uW_iMwgousbLHKweInajFxCcMnGHJ9zfWlOFoAYlpbUS8Oga0A/exec";
+const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz36uSWGiSwRX94wsv_cKtouvV0EBT4HLwYRXbI7KKTajp2gt1a9JSD70xxPefMvAP8RA/exec";
 
 // Ngày sự kiện → key ghi sheet (Đã phục hồi)
 const EVENT_DATES = { '8/4':'8/4', '9/4':'9/4', '10/4':'10/4', '11/4':'11/4' };
