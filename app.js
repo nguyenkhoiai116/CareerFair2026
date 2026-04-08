@@ -223,8 +223,9 @@ function beep(ok=true) {
 }
 
 // ── GỬI & ĐỌC PHẢN HỒI TỪ GOOGLE SHEET (DÙNG JSONP) ──────────
+// ── GỬI & ĐỌC PHẢN HỒI TỪ GOOGLE SHEET (DÙNG FETCH GET) ──────────
 async function sendToSheet(entry) {
-  // if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxu5JAigr1fAroWG12_uW_iMwgousbLHKweInajFxCcMnGHJ9zfWlOFoAYlpbUS8Oga0A/exec") {
+  // if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL === "YOUR_GOOGLE_APP_SCRIPT_URL_HERE") {
   //   return { status: 'error', message: 'Chưa cấu hình link Google Sheet' };
   // }
 
@@ -236,33 +237,20 @@ async function sendToSheet(entry) {
     time: entry.time
   };
   
-  return new Promise((resolve) => {
-    // 1. Tạo một ID ngẫu nhiên cho hàm callback
-    const callbackName = 'jsonp_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  try {
+    // Đính kèm dữ liệu thẳng vào URL
+    const url = GOOGLE_APP_SCRIPT_URL + "?data=" + encodeURIComponent(JSON.stringify(payload));
     
-    // 2. Tạo hàm hứng dữ liệu trả về từ Google
-    window[callbackName] = function(data) {
-      delete window[callbackName]; // Nhận xong thì xóa hàm đi cho nhẹ máy
-      resolve(data);
-    };
-
-    // 3. Nhúng thẻ <script> để gọi API (Cách này lách 100% lỗi CORS)
-    const script = document.createElement('script');
-    script.src = GOOGLE_APP_SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
+    // Gọi lệnh fetch với tùy chọn redirect để đi theo link chuyển hướng của Google
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "follow" 
+    });
     
-    script.onerror = () => {
-      delete window[callbackName];
-      resolve({ status: 'error', message: 'Mất mạng hoặc link Google Sheet bị sai!' });
-    };
-
-    // 4. Gắn vào web để chạy
-    document.body.appendChild(script);
-    
-    // Xóa thẻ script ngay sau khi load xong để giao diện HTML không bị rác
-    script.onload = () => {
-      setTimeout(() => script.remove(), 100);
-    };
-  });
+    return await response.json(); 
+  } catch (e) {
+    return { status: 'error', message: 'Điện thoại chặn kết nối hoặc mất mạng!' };
+  }
 }
 
 // ── XỬ LÝ QUÉT VÀ KIỂM TRA TRÙNG LẶP ──────────────────────────
