@@ -141,12 +141,23 @@ async function startScan() {
   try {
     document.getElementById('btnStart').style.display = 'none';
     scanning = true;
+    
+    // Xóa bộ nhớ đệm mã cũ để lần quét sau nhạy hơn
+    lastScannedCode = '';
+    lastScanTime = 0;
+
     html5QrCode = new Html5Qrcode("reader");
     await html5QrCode.start(
       { facingMode: "environment" },
       { fps: 10 },
-      (decodedText) => { processCode(decodedText); },
-      () => {} 
+      (decodedText) => { 
+        // 1. Tự động tắt camera NGAY LẬP TỨC khi bắt được mã
+        stopScan(); 
+        
+        // 2. Sau đó mới xử lý dữ liệu (để tránh camera chạy ngầm lúc hiện bảng hỏi tên)
+        processCode(decodedText); 
+      },
+      () => {} // Bỏ qua log lỗi khung hình
     );
   } catch(err) {
     showToast('❌ Không mở được camera');
@@ -161,7 +172,12 @@ function stopScan() {
       html5QrCode.clear(); 
       html5QrCode = null; 
       scanning = false;
-      document.getElementById('btnStart').style.display = 'block';
+      
+      // Hiện lại nút và đổi tên thành "Quét tiếp" cho hợp lý
+      const btnStart = document.getElementById('btnStart');
+      btnStart.style.display = 'block';
+      btnStart.innerHTML = '📷 Quét mã tiếp theo'; 
+      
     }).catch(e=>{});
   } else {
     scanning = false;
