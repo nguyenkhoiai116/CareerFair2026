@@ -7,6 +7,7 @@ let scanning   = false;
 let lastScannedCode = '';
 let lastScanTime    = 0;
 let audioCtx = null;
+const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxu5JAigr1fAroWG12_uW_iMwgousbLHKweInajFxCcMnGHJ9zfWlOFoAYlpbUS8Oga0A/exec";
 
 // Ngày sự kiện → key ghi sheet (Đã phục hồi)
 const EVENT_DATES = { '8/4':'8/4', '9/4':'9/4', '10/4':'10/4', '11/4':'11/4' };
@@ -223,9 +224,9 @@ function beep(ok=true) {
 
 // ── GỬI & ĐỌC PHẢN HỒI TỪ GOOGLE SHEET (DÙNG JSONP) ──────────
 async function sendToSheet(entry) {
-  if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxu5JAigr1fAroWG12_uW_iMwgousbLHKweInajFxCcMnGHJ9zfWlOFoAYlpbUS8Oga0A/exec") {
-    return { status: 'error', message: 'Chưa cấu hình link Google Sheet' };
-  }
+  // if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxu5JAigr1fAroWG12_uW_iMwgousbLHKweInajFxCcMnGHJ9zfWlOFoAYlpbUS8Oga0A/exec") {
+  //   return { status: 'error', message: 'Chưa cấu hình link Google Sheet' };
+  // }
 
   const payload = {
     mssv: entry.mssv,
