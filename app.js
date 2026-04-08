@@ -58,74 +58,7 @@ async function loadStudentData() {
   }
 }
 
-// ── XỬ LÝ QUÉT (CHƯA ĐỒNG BỘ GOOGLE SHEET) ───────────────────
-// ── XỬ LÝ QUÉT (CHƯA ĐỒNG BỘ GOOGLE SHEET) ───────────────────
-function processCode(code) {
-  code = String(code || '').trim();
-  if (!code) return;
 
-  // Chống quét trùng liên tiếp trong 2.5 giây
-  const nowMs = Date.now();
-  if (code === lastScannedCode && (nowMs - lastScanTime < 2500)) return;
-  lastScannedCode = code;
-  lastScanTime = nowMs;
-
-  document.getElementById('manInput').value = '';
-  
-  const now     = new Date();
-  const timeStr = now.toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  const dateStr = now.toLocaleDateString('vi-VN');
-  const dateKey = todayKey(); 
-
-  let student = students[code];
-
-  // Nếu MSSV không có trong CSV -> Hỏi tên
-  if (!student) {
-    beep(false); 
-    const inputName = prompt(`⚠️ MSSV ${code} chưa có trong danh sách!\nVui lòng nhập họ và tên (hoặc bấm Hủy để bỏ qua):`);
-    if (!inputName || !inputName.trim()) {
-      setStatus('err', `❌ Đã hủy điểm danh cho MSSV ${code}`);
-      return; 
-    }
-    student = { mssv: code, name: inputName.trim(), role: "Thêm mới" };
-    students[code] = student;
-  }
-
-  const card = document.getElementById('resultCard');
-  card.style.display = 'block';
-  card.className     = '';
-  
-  // Ghi dữ liệu vào UI
-  document.getElementById('rMSSV').textContent = code;
-  document.getElementById('rTime').textContent = timeStr;
-  document.getElementById('rDate').textContent = dateStr;
-  document.getElementById('rType').textContent = mode === 'in' ? '🟢 Check In' : '🔴 Check Out';
-
-  // Kiểm tra ngày sự kiện và lấy Cột ghi
-  let colLabel = '—';
-  if (!EVENT_DATES[dateKey]) {
-    document.getElementById('rAva').textContent  = '⚠️';
-    document.getElementById('rName').textContent = student.name;
-    document.getElementById('rRole').textContent = student.role;
-    document.getElementById('rCol').textContent  = colLabel; // Ngoài sự kiện thì không có cột
-    card.className = 'wrn';
-    setStatus('wrn', `⚠️ Hôm nay (${dateStr}) không nằm trong sự kiện, nhưng vẫn lưu Local!`);
-    beep(false);
-  } else {
-    colLabel = COL_LABEL[dateKey][mode]; // Lấy đúng tên cột (VD: H (In 8/4))
-    document.getElementById('rAva').textContent  = mode === 'in' ? '🟢' : '🔴';
-    document.getElementById('rName').textContent = student.name;
-    document.getElementById('rRole').textContent = student.role;
-    document.getElementById('rCol').textContent  = colLabel; // Đẩy Cột ghi lên UI
-    card.className = 'ok';
-    setStatus('ok', `✅ Đã ghi nhận: ${student.name} (${mode === 'in' ? 'Check In' : 'Check Out'})`);
-    beep(true);
-  }
-
-  // Ghi nhận vào lịch sử bộ nhớ máy
-  const entry = { mssv: code, name: student.name, role: student.role, type: mode === 'in' ? 'Vào' : 'Ra', date: dateStr, time: timeStr };
-  addLog(entry);
-}
 
 // ── QUẢN LÝ CAMERA (html5-qrcode) ─────────────────────────────
 function switchInput(m) {
@@ -286,4 +219,126 @@ function beep(ok=true) {
     g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime+.3);
     o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime+.3);
   } catch(e) {}
+}
+
+// ── GỬI & ĐỌC PHẢN HỒI TỪ GOOGLE SHEET (DÙNG JSONP) ──────────
+async function sendToSheet(entry) {
+  if (!GOOGLE_APP_SCRIPT_URL || GOOGLE_APP_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxu5JAigr1fAroWG12_uW_iMwgousbLHKweInajFxCcMnGHJ9zfWlOFoAYlpbUS8Oga0A/exec") {
+    return { status: 'error', message: 'Chưa cấu hình link Google Sheet' };
+  }
+
+  const payload = {
+    mssv: entry.mssv,
+    name: entry.name,
+    type: entry.type,
+    date: entry.date,
+    time: entry.time
+  };
+  
+  return new Promise((resolve) => {
+    // 1. Tạo một ID ngẫu nhiên cho hàm callback
+    const callbackName = 'jsonp_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    
+    // 2. Tạo hàm hứng dữ liệu trả về từ Google
+    window[callbackName] = function(data) {
+      delete window[callbackName]; // Nhận xong thì xóa hàm đi cho nhẹ máy
+      resolve(data);
+    };
+
+    // 3. Nhúng thẻ <script> để gọi API (Cách này lách 100% lỗi CORS)
+    const script = document.createElement('script');
+    script.src = GOOGLE_APP_SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
+    
+    script.onerror = () => {
+      delete window[callbackName];
+      resolve({ status: 'error', message: 'Mất mạng hoặc link Google Sheet bị sai!' });
+    };
+
+    // 4. Gắn vào web để chạy
+    document.body.appendChild(script);
+    
+    // Xóa thẻ script ngay sau khi load xong để giao diện HTML không bị rác
+    script.onload = () => {
+      setTimeout(() => script.remove(), 100);
+    };
+  });
+}
+
+// ── XỬ LÝ QUÉT VÀ KIỂM TRA TRÙNG LẶP ──────────────────────────
+async function processCode(code) {
+  code = String(code || '').trim();
+  if (!code) return;
+
+  const nowMs = Date.now();
+  if (code === lastScannedCode && (nowMs - lastScanTime < 3000)) return;
+  lastScannedCode = code;
+  lastScanTime = nowMs;
+
+  document.getElementById('manInput').value = '';
+  
+  const now     = new Date();
+  const timeStr = now.toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const dateStr = now.toLocaleDateString('vi-VN');
+  const dateKey = todayKey(); 
+
+  let student = students[code];
+
+  if (!student) {
+    beep(false); 
+    const inputName = prompt(`⚠️ MSSV ${code} chưa có trong danh sách!\nVui lòng nhập họ và tên:`);
+    if (!inputName || !inputName.trim()) {
+      setStatus('err', `❌ Đã hủy điểm danh cho MSSV ${code}`);
+      return; 
+    }
+    student = { mssv: code, name: inputName.trim(), role: "Thêm mới" };
+    students[code] = student;
+  }
+
+  // 1. HIỂN THỊ THẺ KẾT QUẢ LOCAL TRƯỚC
+  const card = document.getElementById('resultCard');
+  card.style.display = 'block';
+  
+  document.getElementById('rMSSV').textContent = code;
+  document.getElementById('rTime').textContent = timeStr;
+  document.getElementById('rDate').textContent = dateStr;
+  document.getElementById('rType').textContent = mode === 'in' ? '🟢 Check In' : '🔴 Check Out';
+  
+  let colLabel = EVENT_DATES[dateKey] ? COL_LABEL[dateKey][mode] : '—';
+  document.getElementById('rAva').textContent  = mode === 'in' ? '🟢' : '🔴';
+  document.getElementById('rName').textContent = student.name;
+  document.getElementById('rRole').textContent = student.role;
+  document.getElementById('rCol').textContent  = colLabel;
+
+  card.className = 'ok';
+  setStatus('ok', `Ghi nhận Local thành công!`);
+
+  // Đóng gói data
+  const entry = { mssv: code, name: student.name, role: student.role, type: mode === 'in' ? 'Vào' : 'Ra', date: dateStr, time: timeStr, col: colLabel };
+  addLog(entry);
+
+  // 2. HIỂN THỊ THẺ TRẠNG THÁI API ĐANG TẢI
+  const apiDiv = document.getElementById('apiStatus');
+  apiDiv.style.display = 'block';
+  apiDiv.className = 'loading';
+  apiDiv.innerHTML = `<span class="spin"></span> Đang đẩy lên Google Sheet...`;
+  
+  // GỌI SHEET VÀ CHỜ KẾT QUẢ
+  const sheetResult = await sendToSheet(entry);
+
+  // 3. CẬP NHẬT THẺ TRẠNG THÁI API KHI CÓ KẾT QUẢ
+  if (sheetResult.status === 'ok') {
+    apiDiv.className = 'success';
+    apiDiv.innerHTML = `✅ ${sheetResult.message}`;
+    beep(true);
+    
+  } else if (sheetResult.status === 'duplicate') {
+    apiDiv.className = 'error';
+    apiDiv.innerHTML = `⚠️ Từ chối: ${sheetResult.message}`;
+    beep(false); 
+    
+  } else {
+    apiDiv.className = 'error';
+    apiDiv.innerHTML = `❌ Lỗi API: ${sheetResult.message}`;
+    beep(false);
+  }
 }

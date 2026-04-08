@@ -98,3 +98,32 @@ nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(19,23,32,.
 .nav-btn.active { color: var(--accent); }
 
 .day-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(91,141,238,.15); border: 1px solid rgba(91,141,238,.35); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 14px; }
+/* Giao diện thẻ Trạng thái API */
+#apiStatus {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+/* Các trạng thái màu sắc của API */
+#apiStatus.loading { background: rgba(245,200,66,.1);  color: var(--yellow); border: 1px solid rgba(245,200,66,.3); }
+#apiStatus.success { background: rgba(52,199,123,.1);  color: var(--green);  border: 1px solid rgba(52,199,123,.3); }
+#apiStatus.error   { background: rgba(240,97,74,.1);   color: var(--red);    border: 1px solid rgba(240,97,74,.3); }
+
+/* Hiệu ứng xoay tròn lúc đang tải */
+.spin { 
+  display: inline-block; 
+  width: 14px; 
+  height: 14px; 
+  border: 2px solid currentColor; 
+  border-top-color: transparent; 
+  border-radius: 50%; 
+  animation: rot .7s linear infinite; 
+  vertical-align: middle; 
+  margin-right: 6px; 
+}
+@keyframes rot { to { transform: rotate(360deg); } }
