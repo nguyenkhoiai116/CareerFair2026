@@ -59,6 +59,7 @@ async function loadStudentData() {
 }
 
 // ── XỬ LÝ QUÉT (CHƯA ĐỒNG BỘ GOOGLE SHEET) ───────────────────
+// ── XỬ LÝ QUÉT (CHƯA ĐỒNG BỘ GOOGLE SHEET) ───────────────────
 function processCode(code) {
   code = String(code || '').trim();
   if (!code) return;
@@ -93,24 +94,31 @@ function processCode(code) {
   const card = document.getElementById('resultCard');
   card.style.display = 'block';
   card.className     = '';
+  
+  // Ghi dữ liệu vào UI
   document.getElementById('rMSSV').textContent = code;
   document.getElementById('rTime').textContent = timeStr;
-  document.getElementById('rType').textContent = mode === 'in' ? '🟢 Vào' : '🔴 Ra';
+  document.getElementById('rDate').textContent = dateStr;
+  document.getElementById('rType').textContent = mode === 'in' ? '🟢 Check In' : '🔴 Check Out';
 
-  // Kiểm tra ngày ngoài sự kiện (Đã phục hồi)
+  // Kiểm tra ngày sự kiện và lấy Cột ghi
+  let colLabel = '—';
   if (!EVENT_DATES[dateKey]) {
     document.getElementById('rAva').textContent  = '⚠️';
     document.getElementById('rName').textContent = student.name;
     document.getElementById('rRole').textContent = student.role;
+    document.getElementById('rCol').textContent  = colLabel; // Ngoài sự kiện thì không có cột
     card.className = 'wrn';
     setStatus('wrn', `⚠️ Hôm nay (${dateStr}) không nằm trong sự kiện, nhưng vẫn lưu Local!`);
     beep(false);
   } else {
+    colLabel = COL_LABEL[dateKey][mode]; // Lấy đúng tên cột (VD: H (In 8/4))
     document.getElementById('rAva').textContent  = mode === 'in' ? '🟢' : '🔴';
     document.getElementById('rName').textContent = student.name;
     document.getElementById('rRole').textContent = student.role;
+    document.getElementById('rCol').textContent  = colLabel; // Đẩy Cột ghi lên UI
     card.className = 'ok';
-    setStatus('ok', `✅ Đã ghi nhận: ${student.name} (${mode === 'in' ? 'Vào' : 'Ra'})`);
+    setStatus('ok', `✅ Đã ghi nhận: ${student.name} (${mode === 'in' ? 'Check In' : 'Check Out'})`);
     beep(true);
   }
 
